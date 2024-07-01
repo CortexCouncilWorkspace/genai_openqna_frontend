@@ -1,5 +1,5 @@
 import google.cloud.bigquery as bigquery
-from google.oauth2 import service_account
+import google.oauth2
 import json
 import streamlit as st
 import random
@@ -9,6 +9,8 @@ import requests
 import configparser
 from streamlit.components.v1 import html
 import pandas
+import google.auth.transport.requests
+import google.oauth2.id_token
 
 # Loading Configuration Values
 module_path = os.path.abspath(os.path.join('.'))
@@ -20,20 +22,45 @@ PROJECT_ID = config['CONFIG']['project_id']
 DATASET_ID = config['CONFIG']['dataset_id'] 
 REGION_ID = config['CONFIG']['region_id'] 
 BACKEND_URL = config['CONFIG']['backend_url']
+AVAILABLE_DATABASES =  config['ENDPOINTS']['available_databases']
+GET_KNOWN_SQL =  config['ENDPOINTS']['get_known_sql']
+GENERATE_SQL =  config['ENDPOINTS']['generate_sql']
+RUN_QUERY =  config['ENDPOINTS']['run_query']
+EMBED_SQL = config['ENDPOINTS']['embed_sql']
+NATURAL_RESPONSE =  config['ENDPOINTS']['natural_response']
+GENERATE_VIZUALIZATION =  config['ENDPOINTS']['generate_vizualization']
 user_database = DATASET_ID
+
 assistant_responses =  [
-        "I'd be glad to help! Here's your answer!",
-        "Great question! Let me get your request...",
-        "Absolutely!",
-        "Of course! Here's the data requested."
+        "Fico feliz em ajudar! Aqui está sua resposta!",
+        "Ótima pergunta! Deixe-me atender seu pedido...",
+        "Absolutamente!",
+        "Claro! Aqui estão os dados solicitados."
         ]
 assistant_no_responses=[
-       "Hmm, I'm still learning about that. Could you rephrase your question, or provide more context?",
-       "I'm not able to find a direct answer right now.",
-       "That's a bit outside of my area of expertise.",
-       "I'm having trouble to find this information.",
-       "It seems like I might need some more training on that topic."
+        "Hmm, ainda estou aprendendo sobre isso. Você poderia reformular sua pergunta ou fornecer mais contexto?",
+        "Não consigo encontrar uma resposta direta agora.",
+        "Isso está um pouco fora da minha área de especialização.",
+        "Estou tendo problemas para encontrar esta informação.",
+        "Parece que talvez eu precise de mais treinamento sobre esse assunto."
         ]
+
+
+def make_authorized_get_request():
+    """
+    make_authorized_get_request makes a GET request to the specified HTTP endpoint
+    by authenticating with the ID token obtained from the google-auth client library
+    using the specified audience value.
+    """
+
+    # Cloud Run uses your service's hostname as the `audience` value
+    # audience = 'https://my-cloud-run-service.run.app/'
+    # For Cloud Run, `endpoint` is the URL (hostname + path) receiving the request
+    # endpoint = 'https://my-cloud-run-service.run.app/my/awesome/url'
+
+    auth_req = google.auth.transport.requests.Request()
+    id_token = google.oauth2.id_token.fetch_id_token(auth_req, BACKEND_URL)
+    return id_token
 
 #Initialize Clients
 bqclient = bigquery.Client(project=PROJECT_ID)
@@ -42,9 +69,11 @@ bqclient = bigquery.Client(project=PROJECT_ID)
 
 def call_list_databases():
     """Lists available databases in the vector store."""
-    url = f"{BACKEND_URL}/available_databases"
+    endpoint = f"{BACKEND_URL}/available_databases"
+    access_token = make_authorized_get_request()
+    headers = {"Authorization": f"Bearer {access_token}"}
     try:
-        response = requests.get(url)
+        response = requests.get(endpoint, headers=headers)
         response.raise_for_status()  # Raise an exception for HTTP errors
         data = response.json()
         return data["KnownDB"]  # Return the list of databases
@@ -55,10 +84,12 @@ def call_list_databases():
 
 def call_get_known_sql(user_database):
     """Gets suggestive questions for the given database."""
-    url = f"{BACKEND_URL}/get_known_sql"
+    endpoint = f"{BACKEND_URL}/get_known_sql"
+    access_token = make_authorized_get_request()
+    headers = {"Authorization": f"Bearer {access_token}"}
     payload = {"user_database": user_database}
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(endpoint, headers=headers, json=payload)
         response.raise_for_status()
         data = response.json()
         return data["KnownSQL"]
@@ -68,10 +99,12 @@ def call_get_known_sql(user_database):
 
 def call_generate_sql(user_question, user_database):
     """Generates SQL for a given question and database."""
-    url = f"{BACKEND_URL}/generate_sql"
+    endpoint = f"{BACKEND_URL}/generate_sql"
+    access_token = make_authorized_get_request()
+    headers = {"Authorization": f"Bearer {access_token}"}
     payload = {"user_question": user_question, "user_database": user_database}
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(endpoint, headers=headers, json=payload)
         response.raise_for_status()
         data = response.json()
         return data["GeneratedSQL"]
@@ -82,10 +115,12 @@ def call_generate_sql(user_question, user_database):
 
 def call_run_query(user_database, generated_sql):
     """Executes the SQL statement against the database."""
-    url = f"{BACKEND_URL}/run_query"
+    endpoint = f"{BACKEND_URL}/run_query"
+    access_token = make_authorized_get_request()
+    headers = {"Authorization": f"Bearer {access_token}"}
     payload = {"user_database": user_database, "generated_sql": generated_sql}
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(endpoint, headers=headers, json=payload)
         response.raise_for_status()
         data = response.json()
         return data["KnownDB"]  # Return query results
@@ -100,14 +135,16 @@ def call_run_query_bq(generated_sql):
 
 def call_embed_sql(user_question, generated_sql, user_database):
     """Embeds known good SQLs."""
-    url = f"{BACKEND_URL}/embed_sql"
+    endpoint = f"{BACKEND_URL}/embed_sql"
+    access_token = make_authorized_get_request()
+    headers = {"Authorization": f"Bearer {access_token}"}
     payload = {
         "user_question": user_question,
         "generated_sql": generated_sql,
         "user_database": user_database,
     }
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(endpoint, headers=headers, json=payload)
         response.raise_for_status()
         return True
     except requests.exceptions.RequestException as e:
@@ -116,10 +153,12 @@ def call_embed_sql(user_question, generated_sql, user_database):
 
 def call_natural_response(user_question, user, sql_results):
     """Generates SQL for a given question and database."""
-    url = f"{BACKEND_URL}/natural_response"
+    endpoint = f"{BACKEND_URL}/natural_response"
+    access_token = make_authorized_get_request()
+    headers = {"Authorization": f"Bearer {access_token}"}
     payload = {"user_question": user_question, "user_database": user_database}
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(endpoint, headers=headers, json=payload)
         response.raise_for_status()
         data = response.json()
         return data["NaturalResponse"]
@@ -129,14 +168,16 @@ def call_natural_response(user_question, user, sql_results):
     
 def call_generate_viz(user_question, sql_generated, sql_results):
     """Generates Google Charts code based on SQL results."""
-    url = f"{BACKEND_URL}/generate_viz"
+    endpoint = f"{BACKEND_URL}/generate_viz"
+    access_token = make_authorized_get_request()
+    headers = {"Authorization": f"Bearer {access_token}"}
     payload = {
         "user_question": user_question,
         "sql_generated": sql_generated,
         "sql_results": sql_results
     }
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(endpoint, headers=headers, json=payload)
         response.raise_for_status()
         return response.json()["GeneratedChartjs"]
     except requests.exceptions.RequestException as e:
@@ -144,11 +185,8 @@ def call_generate_viz(user_question, sql_generated, sql_results):
         return None
 
 
-
-
-
 #Build Frontend
-st.set_page_config(layout="wide", page_title="GenAI - COPEL", page_icon="./images/CorAv2Streamlit.png")
+st.set_page_config(layout="wide", page_title="GenAI - COPEL", page_icon="./images/CopelAss.png")
 with open( "css/style.css" ) as css:
     st.markdown(f'<style>{css.read()}</style>' , unsafe_allow_html= True)
     st.image('./images/Copel_header.png')

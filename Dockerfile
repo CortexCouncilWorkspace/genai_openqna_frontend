@@ -4,7 +4,7 @@ FROM python:3.11
 ENV STREAMLIT_SERVER_ENABLE_STATIC_SERVING=true
 
 EXPOSE 8080
-WORKDIR /cortex-genai-demo-v1
+WORKDIR /genai_opendataqna_frontend
 COPY . ./
 
 #install all requirements in requirements.txt
