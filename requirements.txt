@@ -7,3 +7,6 @@ pandas-gbq
 streamlit
 google-cloud-bigquery
 google-cloud-bigquery-connection
+google-auth-httplib2 
+google-auth-oauthlib
+streamlit-google-auth

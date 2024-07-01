@@ -8,10 +8,13 @@ import sys
 import requests
 import configparser
 from streamlit.components.v1 import html
+from streamlit_google_auth import Authenticate
 import pandas
 import google.auth.transport.requests
 import google.oauth2.id_token
-from streamlit_google_auth import Authenticate
+from google.oauth2 import id_token
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
 
 # Loading Configuration Values
 module_path = os.path.abspath(os.path.join('.'))
@@ -46,6 +49,17 @@ assistant_no_responses=[
         "Parece que talvez eu precise de mais treinamento sobre esse assunto."
         ]
 
+#Initialize Clients
+st.set_page_config(layout="wide", page_title="GenAI - Copel", page_icon="./images/CopelAss.png")
+authenticator = Authenticate(
+    secret_credentials_path='auth/client.json',
+    cookie_name='genai',
+    cookie_key='350401be75bbb0fafd3d912a1a1d5e54',
+    redirect_uri='https://openqnaauthfrontend-emdgo2tmmq-uc.a.run.app',
+)
+bqclient = bigquery.Client(project=PROJECT_ID)
+
+# Define Functions
 def make_authorized_get_request():
     """
     make_authorized_get_request makes a GET request to the specified HTTP endpoint
@@ -62,11 +76,6 @@ def make_authorized_get_request():
     id_token = google.oauth2.id_token.fetch_id_token(auth_req, BACKEND_URL)
     return id_token
 
-#Initialize Clients
-bqclient = bigquery.Client(project=PROJECT_ID)
-
-# Define API Functions
-
 def call_list_databases():
     """Lists available databases in the vector store."""
     endpoint = f"{BACKEND_URL}/available_databases"
@@ -80,7 +89,6 @@ def call_list_databases():
     except requests.exceptions.RequestException as e:
         exception = (f"Error listing databases: {e}")
         return exception
-
 
 def call_get_known_sql(user_database):
     """Gets suggestive questions for the given database."""
@@ -186,64 +194,70 @@ def call_generate_viz(user_question, sql_generated, sql_results):
 
 
 #Build Frontend
-st.set_page_config(layout="wide", page_title="GenAI - COPEL", page_icon="./images/CopelAss.png")
-with open( "css/style.css" ) as css:
-    st.markdown(f'<style>{css.read()}</style>' , unsafe_allow_html= True)
-    st.image('./images/Copel_header.png')
-if "messages" not in st.session_state:
-    st.session_state.messages = []
 
-for message in st.session_state.messages:
-    with st.chat_message(message["role"], avatar=('./images/UserCopel.png' if message["role"] == 'human' else './images/CopelAss.png')):
-        st.markdown(message["content"])
+# Catch the login event
+authenticator.check_authentification()
 
-if prompt := st.chat_input("O que você está buscando?"):
-    st.chat_message("human", avatar='./images/UserCopel.png').markdown(prompt)
-    st.session_state.messages.append({"role": "human", "content": prompt})
-    
-    with st.chat_message("assistant", avatar='./images/CopelAss.png'):
-         with st.spinner("Trabalhando..."):
-            result_sql_code = call_generate_sql(prompt, user_database)
-            if result_sql_code:
-                result_df = call_run_query_bq(result_sql_code)
-                result_json = pandas.DataFrame.to_json(result_df,orient="records")
-                result_graph = call_generate_viz(prompt,result_sql_code, result_json)
-                ai_response = random.choice(assistant_responses)
-                st.write(ai_response)
-                tab1, tab2, tab3, tab4 = st.tabs(["Gráfico 1","Gráfico 2", "Dados", "SQL"])
-                with tab1:
-                    html(f"""
-                    <html>
-                        <head>
-                            <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-                            <script type="text/javascript">
-                                {result_graph["chart_div"]}
-                            </script>
-                        </head>
-                        <body>
-                            <div id="chart_div"></div>
-                        </body>
-                    </html>
-                    """,width=800,height=500,scrolling=False)
-                with tab2:
-                    html(f"""
-                    <html>
-                        <head>
-                            <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-                            <script type="text/javascript">
-                                {result_graph["chart_div_1"]}
-                            </script>
-                        </head>
-                        <body>
-                            <div id="chart_div_1"></div>
-                        </body>
-                    </html>
-                    """,width=800,height=500,scrolling=False)
-                tab3.dataframe(result_df,use_container_width=True,hide_index=True) 
-                tab4.write(result_sql_code)
-                st.session_state.messages.append({"role": "assistant", "content": ai_response})
-            else:
-                ai_response = random.choice(assistant_no_responses)
-                st.write(ai_response)
-                st.session_state.messages.append({"role": "assistant", "content": ai_response})
+# Create the login button
+authenticator.login()
 
+if st.session_state['connected']:
+    with open( "css/style.css" ) as css:
+        st.markdown(f'<style>{css.read()}</style>' , unsafe_allow_html= True)
+        st.image('./images/Copel_header.png')
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"], avatar=('./images/UserCopel.png' if message["role"] == 'human' else './images/CopelAss.png')):
+            st.markdown(message["content"])
+
+    if prompt := st.chat_input("O que você está buscando?"):
+        st.chat_message("human", avatar='./images/UserCopel.png').markdown(prompt)
+        st.session_state.messages.append({"role": "human", "content": prompt})
+        
+        with st.chat_message("assistant", avatar='./images/CopelAss.png'):
+            with st.spinner("Trabalhando..."):
+                result_sql_code = call_generate_sql(prompt, user_database)
+                if result_sql_code:
+                    result_df = call_run_query_bq(result_sql_code)
+                    result_json = pandas.DataFrame.to_json(result_df,orient="records")
+                    result_graph = call_generate_viz(prompt,result_sql_code, result_json)
+                    ai_response = random.choice(assistant_responses)
+                    st.write(ai_response)
+                    tab1, tab2, tab3, tab4 = st.tabs(["Gráfico 1","Gráfico 2", "Dados", "SQL"])
+                    with tab1:
+                        html(f"""
+                        <html>
+                            <head>
+                                <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+                                <script type="text/javascript">
+                                    {result_graph["chart_div"]}
+                                </script>
+                            </head>
+                            <body>
+                                <div id="chart_div"></div>
+                            </body>
+                        </html>
+                        """,width=800,height=500,scrolling=False)
+                    with tab2:
+                        html(f"""
+                        <html>
+                            <head>
+                                <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+                                <script type="text/javascript">
+                                    {result_graph["chart_div_1"]}
+                                </script>
+                            </head>
+                            <body>
+                                <div id="chart_div_1"></div>
+                            </body>
+                        </html>
+                        """,width=800,height=500,scrolling=False)
+                    tab3.dataframe(result_df,use_container_width=True,hide_index=True) 
+                    tab4.write(result_sql_code)
+                    st.session_state.messages.append({"role": "assistant", "content": ai_response})
+                else:
+                    ai_response = random.choice(assistant_no_responses)
+                    st.write(ai_response)
+                    st.session_state.messages.append({"role": "assistant", "content": ai_response})
