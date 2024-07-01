@@ -11,6 +11,7 @@ from streamlit.components.v1 import html
 import pandas
 import google.auth.transport.requests
 import google.oauth2.id_token
+from streamlit_google_auth import Authenticate
 
 # Loading Configuration Values
 module_path = os.path.abspath(os.path.join('.'))
@@ -44,7 +45,6 @@ assistant_no_responses=[
         "Estou tendo problemas para encontrar esta informação.",
         "Parece que talvez eu precise de mais treinamento sobre esse assunto."
         ]
-
 
 def make_authorized_get_request():
     """
@@ -190,7 +190,6 @@ st.set_page_config(layout="wide", page_title="GenAI - COPEL", page_icon="./image
 with open( "css/style.css" ) as css:
     st.markdown(f'<style>{css.read()}</style>' , unsafe_allow_html= True)
     st.image('./images/Copel_header.png')
-
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
