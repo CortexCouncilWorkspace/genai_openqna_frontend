@@ -198,23 +198,10 @@ with st.expander("**Click to see instructions and sample questions!**", expanded
             \n**Use linguagem clara e concisa:**
             \nEvite ambiguidades: Use termos precisos e evite gírias ou linguagem coloquial.
             \nSeja breve: Formule sua pergunta da forma mais simples e direta possível.
-            \n    
-            \n**Exemplos de perguntas:**
-            \n**Quais os documentos em aberto para o fornecedor NTT, empresa 1000?**
-            \n**Quais as faturas a pagar para o fornecedor NTT, não pagas, empresa 1000**
-            \n**Quais as faturas a pagar para o fornecedor NTT, não compensadas, empresa 1000**
-            \n**Quais os documentos em aberto para o fornecedor NTT, empresa 1000 gerados entre 01/01/2022 até hoje.**
-            \n**Qual o montante em aberto para o fornecedor NTT DATA, empresa 1000?**
-            \n**Qual o montante em aberto para o fornecedor NTT, empresa 1000, traga o número do documento, data de vencimento.**
-            \n**O que tenho a pagar hoje na empresa 1000?**
-            \n**O que tenho a pagar hoje na empresa 1000, considere documentos que vencem hoje ou estão vencidos?**
-            \n**O que tenho a pagar hoje na empresa 1000, considere documentos já vencidos.**
-            \n**Qual o percentual e montante total de pagamentos manuais ocorridos em 2015 na empresa 1000?**
-            \n**Quais as faturas em aberto para o fornecedor NTT, empresa 1000?**
-            \n**Quais foram os 5 maiores fornecedores da empresa 1000 em 2015?**
+            \n
             """)
 col1, col2, col3 = st.columns([5,3,5])
-with col2:
+with col1:
     generate_graph = st.toggle('Experimental: Show graphs?', value=False, key=None, help=None, on_change=None, args=None, kwargs=None, disabled=False, label_visibility="visible")
 if "session_data" not in st.session_state:
     st.session_state.session_data = {
