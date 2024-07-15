@@ -1,15 +1,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet'); 
 
 html, body, [class*="css"] {
-    font-family: "Roboto", sans-serif;
+    font-family: "Open Sans", sans-serif;
     font-size: 16px;
     font-weight: 500;
-    color: #ec6500;
+    color: #174ea6;
 }
 .st-emotion-cache-1c7y2kd {
     flex-direction: row-reverse;
     text-align: right;
-    background: #fcf3eb
+    background: #174ea6 / 0.5;
 }
 .fullScreenFrame > div {
     display: flex;

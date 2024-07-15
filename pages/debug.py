@@ -30,10 +30,10 @@ def call_run_query_bq(audit_sql):
         result_bq = bqclient.query(audit_sql).result().to_dataframe()
         return result_bq
 
-st.set_page_config(layout="wide", page_title="GenAI - Debug", page_icon="./images/CopelAss.png")
+st.set_page_config(layout="wide", page_title="CORA - GenAI - Debug", page_icon="./images/CorAv2Streamlit.png")
 with open( "css/style.css" ) as css:
     st.markdown(f'<style>{css.read()}</style>' , unsafe_allow_html= True)
-    st.image('./images/Copel_header.png')
+    st.image('./images/Coraheader970x250pxWhite.png')
 
 result_df = call_run_query_bq(audit_sql)
 st.dataframe(result_df,use_container_width=False,hide_index=True)

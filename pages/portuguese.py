@@ -182,40 +182,14 @@ def call_generate_viz(user_question, sql_generated, sql_results):
 
 #Build Frontend
 
-
-instructions = f""" 
-
-
-    """
-
-st.image('./images/Coraheader970x250pxWhite.png', use_column_width="auto")
-with st.expander("**Click to see instructions and sample questions!**", expanded=False):
-    st.markdown(f"""
-            **Seja específico e direto:**
-            \nEspecifique a ação desejada: Comece sua pergunta com o verbo que indica a ação que você quer realizar (ex: "mostrar", "listar", "calcular", "resumir").
-            \n**Defina os filtros:** 
-            \nEspecifique claramente os critérios que você deseja usar para filtrar os resultados (ex: "onde o país é Brasil", "entre as datas X e Y").
-            \n**Use linguagem clara e concisa:**
-            \nEvite ambiguidades: Use termos precisos e evite gírias ou linguagem coloquial.
-            \nSeja breve: Formule sua pergunta da forma mais simples e direta possível.
-            \n    
-            \n**Exemplos de perguntas:**
-            \n**Quais os documentos em aberto para o fornecedor NTT, empresa 1000?**
-            \n**Quais as faturas a pagar para o fornecedor NTT, não pagas, empresa 1000**
-            \n**Quais as faturas a pagar para o fornecedor NTT, não compensadas, empresa 1000**
-            \n**Quais os documentos em aberto para o fornecedor NTT, empresa 1000 gerados entre 01/01/2022 até hoje.**
-            \n**Qual o montante em aberto para o fornecedor NTT DATA, empresa 1000?**
-            \n**Qual o montante em aberto para o fornecedor NTT, empresa 1000, traga o número do documento, data de vencimento.**
-            \n**O que tenho a pagar hoje na empresa 1000?**
-            \n**O que tenho a pagar hoje na empresa 1000, considere documentos que vencem hoje ou estão vencidos?**
-            \n**O que tenho a pagar hoje na empresa 1000, considere documentos já vencidos.**
-            \n**Qual o percentual e montante total de pagamentos manuais ocorridos em 2015 na empresa 1000?**
-            \n**Quais as faturas em aberto para o fornecedor NTT, empresa 1000?**
-            \n**Quais foram os 5 maiores fornecedores da empresa 1000 em 2015?**
-            """)
+st.image('./images/Coraheader970x250pxWhite_Portuguese.png', use_column_width="auto")
+with st.expander("**Clique para ver instruções e exemplos de perguntas!**", expanded=False):
+    st.text(f"""
+                Trabalho em progresso!
+                """)
 col1, col2, col3 = st.columns([5,3,5])
 with col2:
-    generate_graph = st.toggle('Experimental: Show graphs?', value=False, key=None, help=None, on_change=None, args=None, kwargs=None, disabled=False, label_visibility="visible")
+    generate_graph = st.toggle('Experimental: Mostrar Gráficos?', value=False, key=None, help=None, on_change=None, args=None, kwargs=None, disabled=False, label_visibility="visible")
 if "session_data" not in st.session_state:
     st.session_state.session_data = {
         "messages": [],
@@ -229,7 +203,7 @@ for message in st.session_state.session_data["messages"]:
                 st.markdown(message["content"])
                 with st.expander("Dados Solicitados:", expanded=True):
                     if generate_graph:
-                        tab1, tab2, tab3, tab4 = st.tabs(["Graph 1", "Graph 2", "Data", "SQL"])
+                        tab1, tab2, tab3, tab4 = st.tabs(["Gráfico 1", "Gráfico 2", "Dados", "SQL"])
                         with tab1:
                             html(f"""
                             <html>
@@ -261,38 +235,38 @@ for message in st.session_state.session_data["messages"]:
                         tab3.dataframe(message["Dados"],use_container_width=True,hide_index=True)
                         tab4.write(message["SQL"])
                     else:
-                        tab3, tab4 = st.tabs(["Data", "SQL"])
+                        tab3, tab4 = st.tabs(["Dados", "SQL"])
                         tab3.dataframe(message["Dados"],use_container_width=True,hide_index=True)
                         tab4.write(message["SQL"])
             elif message["ok_code"] == 201:
                 st.markdown(message["content"])
-                with st.expander("Generated SQL:", expanded=True):
+                with st.expander("SQL Gerado:", expanded=True):
                     st.write(message["SQL"])
             else:
                 st.markdown(message["content"])
 
-if prompt := st.chat_input("Let me show you my magic, ask me a question!"):
+if prompt := st.chat_input("Deixe-me mostrar minha mágica, me faça uma pergunta!"):
     st.chat_message("human", avatar='./images/Userv2_128px.png').markdown(prompt)
     st.session_state.session_data["messages"].append({"role": "human", "content": prompt})
     
     with st.chat_message("assistant", avatar='./images/CorAv2Streamlit.png'):
-        with st.spinner("Doing the magic!!!"):
+        with st.spinner("Fazendo a mágica!!!"):
             result_sql_code = call_generate_sql(prompt, user_database)
             if result_sql_code["ResponseCode"] == 200:
                 result_df = call_run_query_bq(result_sql_code["GeneratedSQL"])
                 if not result_df.empty:              
                     result_json = pandas.DataFrame.to_json(result_df.head(12),orient="records")
                     result_graph = call_generate_viz(prompt,result_sql_code["GeneratedSQL"],result_json)
-                    ai_response = "I'd be glad to help! Here's your answer!"
+                    ai_response = "Ficarei feliz em ajudar! Aqui está sua resposta!"
                     st.session_state.session_data["messages"].append({"role": "assistant", "content": ai_response, "ok_code": 200, "Dados": result_df, "SQL": result_sql_code["GeneratedSQL"], "Graph1": result_graph["chart_div"], "Graph2": result_graph["chart_div_1"]})
                     st.rerun() 
                 else:
-                    ai_response = "The query was generated successfully, but it did not return any data, please request different data!"
-                    with st.expander("Preview the generated query!"):
+                    ai_response = "A consulta foi gerada com sucesso, mas não retornou nenhum dado, solicite dados diferentes!"
+                    with st.expander("Visualize a consulta gerada!"):
                         st.write(result_sql_code["GeneratedSQL"])
                     st.session_state.session_data["messages"].append({"role": "assistant", "content": ai_response, "ok_code": 201, "Dados": [], "SQL": result_sql_code["GeneratedSQL"], "Graph1": [], "Graph2": []})    
                     st.rerun() 
             else:
-                ai_response = "Hmm, I'm still learning about that. Could you rephrase your question, or provide more context?"
+                ai_response = "Hmm, ainda estou aprendendo sobre isso. Você poderia reformular sua pergunta ou fornecer mais contexto?"
                 st.session_state.session_data["messages"].append({"role": "assistant", "content": ai_response, "ok_code": 500, "Dados": [], "SQL": [], "Graph1": [], "Graph2": []})
                 st.rerun()
